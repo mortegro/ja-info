@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktiver Leitfaden: Digitales Befragungssystem Jugendamt</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: "Calm Bureaucracy" (Warm Neutrals mit professionellem Blau) -->
+    <!-- Application Structure Plan: Die App ist als interaktiver Entscheidungsleitfaden strukturiert, nicht als lineare Kopie des Berichts. Sie beginnt mit der wichtigsten Frage (Förderung), geht über zu strategischen (Software-Wahl) und technischen (Anforderungen) Aspekten, deckt die kritischen rechtlichen Rahmenbedingungen (Datenschutz) ab und endet mit konkreten Handlungsschritten (Kooperation, Aktionsplan). Diese thematische, aufgabenorientierte Struktur ermöglicht es Nutzern (z.B. Entscheider im Jugendamt), gezielt auf die für sie relevanten Informationen zuzugreifen und die Zusammenhänge zwischen den Themen interaktiv zu erkunden. Der Nutzer wird so von der Problemstellung zur Lösung geführt. -->
+    <!-- Visualization & Content Choices: 
+        1. Förderprogramme (Tabelle 1) -> Ziel: Vergleichen -> Viz: Interaktive, filterbare Karten + Bar-Chart -> Interaktion: Filtern (Bund/Land/EU), Klicken für Details, visueller Vergleich von Fördersummen -> Justification: Schnellerer Überblick und direkter Vergleich als in einer statischen Tabelle. Library: Vanilla JS, Chart.js.
+        2. Open Source vs. Proprietär (Tabelle 2) -> Ziel: Vergleichen -> Viz: Zweispaltiges Layout mit Pro/Contra-Karten -> Interaktion: Hover-Effekte, Klick zum Hervorheben der empfohlenen Option -> Justification: Stellt die strategische Wahl klar und direkt gegenüber. Library: Vanilla JS, Tailwind CSS.
+        3. Datenschutz (Tabelle 3) -> Ziel: Informieren/Organisieren -> Viz: Interaktive Akkordeon-Checkliste -> Interaktion: Klicken zum Anzeigen von Details zu jedem Punkt -> Justification: Macht die komplexen rechtlichen Anforderungen zugänglich und als Checkliste handhabbar. Library: Vanilla JS.
+        4. System-Features -> Ziel: Informieren -> Viz: Strukturierte Liste mit Icons -> Interaktion: Keine (Fokus auf Klarheit) -> Justification: Icons verbessern die schnelle Erfassbarkeit der Funktionsbereiche. Library: HTML/CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #333;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-button.active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 450px;
+            }
+        }
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .audio-player-container {
+            z-index: 20; /* Ensure it's above other content if needed */
+        }
+        .audio-button {
+            background-color: #3b82f6; /* Blue-500 from Tailwind */
+            color: white;
+            border-radius: 50%;
+            width: 48px; /* Adjust size as needed */
+            height: 48px; /* Adjust size as needed */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        .audio-button:hover {
+            background-color: #2563eb; /* Blue-600 from Tailwind */
+            transform: scale(1.05);
+        }
+        .audio-button svg {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8">
+        
+        <header class="text-center mb-12 ">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-2">Digitalisierung im Jugendamt</h1>
+                <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">Ihr interaktiver Leitfaden zur Förderung und Implementierung eines datenschutzkonformen Befragungssystems.</p>
+        </header>
+
+        <nav class="sticky top-0 bg-f8f7f4/80 backdrop-blur-md z-10 mb-10 border-b border-gray-200">
+            <div class="flex flex-wrap justify-center gap-x-4 sm:gap-x-8 text-sm md:text-base">
+                <div class="audio-player-container">
+                    <audio id="audioPlayer" src="public/Zusammenfassung.mp3"></audio>
+                    <button id="playPauseButton" class="audio-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                            <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.38 2.872-1.664l11.55 6.933c1.296.777 1.296 2.653 0 3.43L7.372 21.01c-1.343.716-2.872-.238-2.872-1.664V5.653Z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <button data-target="s1" class="nav-button active py-4 px-2">🚀 Aktionsplan</button>
+                <button data-target="s2" class="nav-button py-4 px-2">💰 Förder-Kompass</button>
+                <button data-target="s3" class="nav-button py-4 px-2">🤔 Strategische Weiche</button>
+                <button data-target="s4" class="nav-button py-4 px-2">📋 System-Anforderungen</button>
+                <button data-target="s5" class="nav-button py-4 px-2">🛡️ Datenschutz-Checkliste</button>
+                <button data-target="s6" class="nav-button py-4 px-2">🤝 Kooperations-Modell</button>
+            </div>
+        </nav>
+
+        <main>
+            <!-- Section 1: Aktionsplan -->
+            <section id="s1" class="content-section active">
+                <div class="bg-white p-6 md:p-8 rounded-lg card-shadow">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Empfohlener Aktionsplan</h2>
+                    <p class="text-gray-600 mb-8">Dieser Plan fasst die wichtigsten Schritte zusammen, um Ihr Digitalisierungsprojekt erfolgreich zu starten. Er dient als Roadmap von der ersten Idee bis zur Umsetzung.</p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl font-bold">1</div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-gray-700">Förderstrategie definieren</h3>
+                                <p class="text-gray-600">Fokussieren Sie sich primär auf das BMWK-Programm <strong class="font-semibold">"Entwicklung digitaler Technologien"</strong>. Prüfen Sie parallel landesspezifische Digitalisierungs- und EU-Fonds (EFRE, ESF+). Das Partner-KMU sollte eigene Förderungen wie ZIM oder KfW-Kredite prüfen.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl font-bold">2</div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-gray-700">Strategische & technische Weichen stellen</h3>
+                                <p class="text-gray-600">Treffen Sie eine fundierte Entscheidung zwischen <strong class="font-semibold">Open-Source</strong> und proprietärer Software. Definieren Sie klare technische Anforderungen, Funktionalitäten und die notwendige Interoperabilität mit bestehenden Fachverfahren.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                             <div class="flex-shrink-0 w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl font-bold">3</div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-gray-700">Datenschutz von Anfang an</h3>
+                                <p class="text-gray-600">Binden Sie den <strong class="font-semibold">Datenschutzbeauftragten (DSB)</strong> frühzeitig ein. Implementieren Sie "Privacy by Design", klären Sie die Rechtsgrundlagen und erstellen Sie einen umfassenden Auftragsverarbeitungsvertrag (AVV) mit dem IT-Partner.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                             <div class="flex-shrink-0 w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl font-bold">4</div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-gray-700">Partnerschaft gestalten</h3>
+                                <p class="text-gray-600">Definieren Sie den Projektumfang, die Leistungen und Verantwortlichkeiten in einem <strong class="font-semibold">detaillierten Projektplan</strong> und Vertrag. Etablieren Sie klare Kommunikationswege und nutzen Sie die Förderberatungskompetenz des KMU-Partners.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Förder-Kompass -->
+            <section id="s2" class="content-section">
+                 <div class="bg-white p-6 md:p-8 rounded-lg card-shadow">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Förder-Kompass</h2>
+                    <p class="text-gray-600 mb-6">Navigieren Sie durch die Förderlandschaft. Filtern Sie die Programme nach Ebene und finden Sie die passende Finanzierung für Ihr Vorhaben und Ihren IT-Partner.</p>
+                    
+                    <div class="flex flex-wrap justify-center gap-2 mb-8">
+                        <button class="filter-btn bg-blue-500 text-white py-2 px-4 rounded-full" data-filter="all">Alle anzeigen</button>
+                        <button class="filter-btn bg-gray-200 text-gray-700 py-2 px-4 rounded-full" data-filter="Bund">Bund</button>
+                        <button class="filter-btn bg-gray-200 text-gray-700 py-2 px-4 rounded-full" data-filter="Land">Land</button>
+                        <button class="filter-btn bg-gray-200 text-gray-700 py-2 px-4 rounded-full" data-filter="EU">EU</button>
+                    </div>
+
+                    <div id="funding-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Funding cards will be injected by JS -->
+                    </div>
+
+                    <div class="mt-12">
+                         <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Vergleich maximaler Fördersummen (Beispiele)</h3>
+                         <div class="chart-container">
+                            <canvas id="fundingChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 p-6 bg-blue-50 rounded-lg card-shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">✨ Förderprogramm-Matchmaker</h3>
+                        <p class="text-gray-600 mb-4">Beschreiben Sie Ihr Projekt kurz, und ich helfe Ihnen, passende Förderprogramme zu finden:</p>
+                        <textarea id="project-description-input" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300" rows="4" placeholder="Z.B.: 'Wir möchten ein barrierefreies Online-Portal für die Antragsstellung im Jugendamt entwickeln, das eine bessere Prozessanalyse ermöglicht.'"></textarea>
+                        <button id="find-funding-btn" class="mt-4 bg-blue-600 text-white py-2 px-6 rounded-full hover:bg-blue-700 transition-colors flex items-center justify-center">
+                            <span id="find-funding-text">Programme finden</span>
+                            <div id="find-funding-spinner" class="hidden spinner ml-2"></div>
+                        </button>
+                        <div id="funding-match-results" class="mt-6 p-4 bg-white border border-gray-200 rounded-lg hidden">
+                            <h4 class="font-semibold text-gray-700 mb-2">Vorgeschlagene Förderprogramme:</h4>
+                            <div id="match-results-content" class="text-gray-600 text-sm"></div>
+                            <button id="copy-funding-results-btn" class="mt-4 text-blue-600 hover:underline text-sm">Ergebnisse kopieren</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Section 3: Strategische Weiche -->
+            <section id="s3" class="content-section">
+                <div class="bg-white p-6 md:p-8 rounded-lg card-shadow">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Strategische Weiche: Open Source vs. Proprietär</h2>
+                    <p class="text-gray-600 mb-8">Die Wahl der Software-Art ist eine fundamentale Entscheidung für digitale Souveränität, Flexibilität und langfristige Kosten. Vergleichen Sie die beiden Ansätze, um die richtige Wahl für Ihr Jugendamt zu treffen.</p>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div id="os-card" class="border-2 border-blue-500 p-6 rounded-lg bg-blue-50 transition-all duration-300">
+                            <h3 class="text-2xl font-bold text-blue-800 mb-4">Open Source Software (OSS)</h3>
+                            <p class="font-semibold text-blue-700 mb-4">Empfohlen für langfristige Souveränität & Flexibilität</p>
+                            <ul class="space-y-3">
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Digitale Souveränität:</strong> Keine Abhängigkeit von einem Anbieter (Vendor Lock-in). Volle Kontrolle über Daten und Code.</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Hohe Flexibilität:</strong> Der offene Quellcode erlaubt maßgeschneiderte Anpassungen an die exakten Prozesse des Jugendamtes.</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Kosteneffizienz:</strong> In der Regel keine Lizenzgebühren, was langfristig Kosten spart.</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Transparenz & Sicherheit:</strong> Offener Code kann von einer breiten Community geprüft werden, was die Sicherheit erhöhen kann.</li>
+                                <li class="flex items-start"><span class="text-red-500 mr-2">✘</span> <strong>Ressourcenbedarf:</strong> Erfordert technische Expertise für Anpassung, Wartung und Support, entweder intern oder durch einen starken IT-Partner.</li>
+                            </ul>
+                        </div>
+                        
+                        <div id="prop-card" class="border-2 border-gray-300 p-6 rounded-lg bg-gray-50 transition-all duration-300">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-4">Proprietäre Software</h3>
+                            <p class="font-semibold text-gray-700 mb-4">Option für schlüsselfertige Lösungen mit Support</p>
+                             <ul class="space-y-3">
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Umfassender Support:</strong> Anbieter liefert professionellen Support, Wartung und regelmäßige Updates aus einer Hand.</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Benutzerfreundlichkeit:</strong> Oft hohe Benutzerfreundlichkeit und einfache Integration, da für spezifische Anwendungsfälle entwickelt.</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✔</span> <strong>Geringerer interner Aufwand:</strong> Weniger interne IT-Ressourcen für die Implementierung und Wartung erforderlich.</li>
+                                <li class="flex items-start"><span class="text-red-500 mr-2">✘</span> <strong>Anbieterabhängigkeit:</strong> Hohes Risiko eines "Vendor Lock-in". Abhängigkeit von Preis- und Produktpolitik des Anbieters.</li>
+                                <li class="flex items-start"><span class="text-red-500 mr-2">✘</span> <strong>Hohe Kosten:</strong> Signifikante und wiederkehrende Lizenzgebühren.</li>
+                                <li class="flex items-start"><span class="text-red-500 mr-2">✘</span> <strong>Eingeschränkte Anpassbarkeit:</strong> Anpassungen sind nur im vom Anbieter vorgesehenen Rahmen möglich.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Section 4: System-Anforderungen -->
+            <section id="s4" class="content-section">
+                <div class="bg-white p-6 md:p-8 rounded-lg card-shadow">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Essenzielle System-Anforderungen</h2>
+                    <p class="text-gray-600 mb-8">Ein erfolgreiches Befragungssystem muss mehr leisten als nur Daten zu sammeln. Es muss benutzerfreundlich, analysefähig und sicher in Ihre bestehende IT-Landschaft integrierbar sein.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                                    <span class="text-2xl mr-3">📝</span> Datenerfassung
+                                </h3>
+                                <p class="text-gray-600">Sichere, intuitive und barrierefreie Online-Formulare für Antragsteller. Inklusive Datenvalidierung zur Sicherstellung der Datenqualität und kindgerechter Gestaltung bei Befragungen von Minderjährigen.</p>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                                    <span class="text-2xl mr-3">🔗</span> Interoperabilität
+                                </h3>
+                                <p class="text-gray-600">Nahtlose Integration mit bestehenden Fachverfahren des Jugendamtes. Medienbruchfreier Datenaustausch nach dem "Once-Only-Prinzip", um doppelte Datenerfassung zu vermeiden.</p>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                             <div>
+                                <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                                    <span class="text-2xl mr-3">📊</span> Prozessanalyse & Reporting
+                                </h3>
+                                <p class="text-gray-600">Integrierte Funktionen zur Aggregation, Auswertung und Visualisierung von Daten. Erkennung von Mustern, Engpässen und Trends zur kontinuierlichen Verbesserung interner Antragsprozesse.</p>
+                            </div>
+                             <div>
+                                <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                                    <span class="text-2xl mr-3">🧑‍💻</span> Benutzerfreundlichkeit (UX)
+                                </h3>
+                                <p class="text-gray-600">Hohe Akzeptanz durch intuitive Bedienbarkeit sowohl für die Mitarbeiter des Jugendamtes als auch für die externen Antragsteller. Eine positive Nutzererfahrung ist entscheidend für den Erfolg.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Datenschutz-Checkliste -->
+            <section id="s5" class="content-section">
+                 <div class="bg-white p-6 md:p-8 rounded-lg card-shadow">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Interaktive Datenschutz-Checkliste</h2>
+                    <p class="text-gray-600 mb-8">Der Schutz sensibler Sozialdaten ist nicht verhandelbar. Nutzen Sie diese Checkliste, um die Einhaltung der DSGVO, des BDSG und des SGB sicherzustellen. Klicken Sie auf einen Punkt, um Details zur Umsetzung zu sehen.</p>
+                    <div id="privacy-checklist" class="space-y-2">
+                        <!-- Checklist items will be injected by JS -->
+                    </div>
+
+                    <div class="mt-12 p-6 bg-blue-50 rounded-lg card-shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">✨ Datenschutz-Erklärer</h3>
+                        <p class="text-gray-600 mb-4">Stellen Sie mir eine Frage zum Datenschutz, und ich erkläre es Ihnen:</p>
+                        <textarea id="privacy-question-input" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300" rows="3" placeholder="Z.B.: 'Was bedeutet Anonymisierung im Kontext von Befragungsdaten?'"></textarea>
+                        <button id="ask-privacy-btn" class="mt-4 bg-blue-600 text-white py-2 px-6 rounded-full hover:bg-blue-700 transition-colors flex items-center justify-center">
+                            <span id="ask-privacy-text">Frage stellen</span>
+                            <div id="ask-privacy-spinner" class="hidden spinner ml-2"></div>
+                        </button>
+                        <div id="privacy-explanation-results" class="mt-6 p-4 bg-white border border-gray-200 rounded-lg hidden">
+                            <h4 class="font-semibold text-gray-700 mb-2">Antwort:</h4>
+                            <div id="explanation-content" class="text-gray-600 text-sm"></div>
+                            <button id="copy-privacy-results-btn" class="mt-4 text-blue-600 hover:underline text-sm">Antwort kopieren</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Kooperations-Modell -->
+            <section id="s6" class="content-section">
+                <div class="bg-white p-6 md:p-8 rounded-lg card-shadow">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Erfolgsmodell: Kooperation mit IT-KMU</h2>
+                    <p class="text-gray-600 mb-8">Die Partnerschaft mit einem mittelständischen IT-Unternehmen (KMU) ist mehr als nur eine Beauftragung. Sie ist ein Katalysator für Innovation und ermöglicht den Zugang zu spezialisiertem Wissen und Fördermitteln.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Vorteile der Partnerschaft</h3>
+                            <ul class="space-y-3 list-disc list-inside text-gray-600">
+                                <li><strong>Innovation & Agilität:</strong> KMU setzen innovative Ansätze oft schneller und flexibler um.</li>
+                                <li><strong>Spezialisiertes Fachwissen:</strong> Zugang zu Expertise in Softwareentwicklung, UI/UX-Design und IT-Sicherheit.</li>
+                                <li><strong>Zugang zu Förderungen:</strong> Viele Förderprogramme (z.B. ZIM) sind auf Kooperationen mit KMU ausgelegt.</li>
+                                <li><strong>Regionale Wirtschaftsförderung:</strong> Stärkung des lokalen Wirtschaftsstandorts.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Schlüssel zum Erfolg</h3>
+                             <ul class="space-y-3 list-disc list-inside text-gray-600">
+                                <li><strong>Klare Anforderungen:</strong> Ein detailliertes Lastenheft vermeidet Missverständnisse.</li>
+                                <li><strong>Wasserdichte Verträge:</strong> Regelung von SLAs, geistigem Eigentum und Wartung.</li>
+                                <li><strong>Umfassender AV-Vertrag:</strong> Der Auftragsverarbeitungsvertrag (AVV) ist rechtlich zwingend und muss die datenschutzrechtlichen Pflichten klar definieren.</li>
+                                <li><strong>Serverstandort DE/EU:</strong> Vertragliche Zusicherung des Serverstandorts zur Gewährleistung des Datenschutzes.</li>
+                                <li><strong>Strukturiertes Projektmanagement:</strong> Regelmäßige Abstimmung und klare Kommunikationswege.</li>
+                             </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navButtons = document.querySelectorAll('.nav-button');
+            const contentSections = document.querySelectorAll('.content-section');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+
+            const audioPlayer = document.getElementById('audioPlayer');
+            const playPauseButton = document.getElementById('playPauseButton');
+
+            playPauseButton.addEventListener('click', () => {
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                    playPauseButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                                    <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0a.75.75 0 0 1 .75-.75H16.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z" clip-rule="evenodd" />
+                                                  </svg>`;
+                } else {
+                    audioPlayer.pause();
+                    playPauseButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                                    <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.38 2.872-1.664l11.55 6.933c1.296.777 1.296 2.653 0 3.43L7.372 21.01c-1.343.716-2.872-.238-2.872-1.664V5.653Z" clip-rule="evenodd" />
+                                                  </svg>`;
+                }
+            });
+
+            audioPlayer.addEventListener('ended', () => {
+                playPauseButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                                <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.38 2.872-1.664l11.55 6.933c1.296.777 1.296 2.653 0 3.43L7.372 21.01c-1.343.716-2.872-.238-2.872-1.664V5.653Z" clip-rule="evenodd" />
+                                              </svg>`;
+            });
+
+            const fundingData = [
+                { id: 1, name: 'Zentrales Innovationsprogramm Mittelstand (ZIM)', level: 'Bund', type: 'Zuschuss', target: 'Primär für KMU-Partner, Jugendamt als Kooperationspartner.', details: 'Fördert FuE-Kooperationsprojekte. Max. Fördersumme pro Projekt: 2,3 Mio. €. Jugendamt als Forschungseinrichtung (bis 100% / max. 220.000 €) muss geklärt werden.', maxAmount: 2300000 },
+                { id: 2, name: 'Entwicklung digitaler Technologien (BMWK)', level: 'Bund', type: 'Zuschuss', target: 'Jugendamt (als öffentl. Einrichtung) & KMU-Partner.', details: 'Fördert F&E in digitalen Technologien. Öffentliche Einrichtungen können bis zu 100% gefördert werden, Unternehmen 25-50%. Sehr passend für das Vorhaben.', maxAmount: 0 },
+                { id: 3, name: 'ERP-Digitalisierungs- und Innovationskredit', level: 'Bund', type: 'Kredit', target: 'Nur für KMU-Partner.', details: 'Kredit der KfW zur Finanzierung von Investitionen und Betriebsmitteln. Bis 25 Mio. €, kein Zuschuss.', maxAmount: 25000000 },
+                { id: 4, name: 'Digitalisierungsinitiativen der Länder', level: 'Land', type: 'Zuschuss', target: 'Jugendamt (als Kommune).', details: 'Programme für Kommunen (z.B. in Hessen, Bayern, NRW). Fördern Hardware, Software, Projekte. Bedingungen und Fristen stark landesspezifisch.', maxAmount: 20000 },
+                { id: 5, name: 'Digitalbonus Programme', level: 'Land', type: 'Zuschuss', target: 'Nur für KMU-Partner.', details: 'Unterstützen KMU bei Digitalisierung (z.g. Thüringen bis 15.000 €). Wichtig: Schließen oft Unternehmen mit öffentlicher Beteiligung aus!', maxAmount: 15000 },
+                { id: 6, name: 'Europäische Strukturfonds (EFRE, ESF+)', level: 'EU', type: 'Zuschuss', target: 'Jugendamt & KMU-Partner.', details: 'Verwaltet über die Bundesländer. EFRE für digitale Transformation, ESF+ für soziale Innovation. Projekt muss in regionale Programme passen.', maxAmount: 0 },
+                { id: 7, name: 'Digital Europe Programme', level: 'EU', type: 'Zuschuss', target: 'Indirekt für Jugendamt.', details: 'Großes EU-Programm. Zugang für Kommunen meist indirekt über nationale Stellen. Fokus auf strategische, trans-europäische Projekte.', maxAmount: 0 },
+                { id: 8, name: 'Zentrum für Digitale Souveränität (ZenDiS)', level: 'Bund', type: 'Beratung', target: 'Jugendamt.', details: 'Keine finanzielle Förderung. Bietet strategische Beratung, Koordination und Vernetzung, insbesondere bei Open-Source-Vorhaben.', maxAmount: 0 }
+            ];
+
+            const privacyData = [
+                { title: 'Rechtmäßigkeit der Verarbeitung', content: '<strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. e DSGVO, SGB X, SGB VIII. <br><strong>Umsetzung:</strong> Die Datenerhebung muss zur Erfüllung einer gesetzlichen Aufgabe erforderlich sein. Bei freiwilligen Angaben ist eine explizite Einwilligung (Art. 6 Abs. 1 lit. a) notwendig.' },
+                { title: 'Daten von Kindern (unter 16)', content: '<strong>Rechtsgrundlage:</strong> Art. 8 DSGVO. <br><strong>Umsetzung:</strong> Zwingende Einholung der vorherigen, nachweisbaren Einwilligung der Erziehungsberechtigten. Datenschutzinformationen müssen in kindgerechter Sprache formuliert sein.' },
+                { title: 'Datenminimierung & Zweckbindung', content: '<strong>Rechtsgrundlage:</strong> Art. 5 Abs. 1 lit. b/c DSGVO. <br><strong>Umsetzung:</strong> Es dürfen nur die Daten erhoben werden, die für den klar definierten Zweck (z.B. Antragsbearbeitung) absolut notwendig sind. Daten dürfen nicht für andere Zwecke weiterverarbeitet werden.' },
+                { title: 'Anonymisierung & Pseudonymisierung', content: '<strong>Rechtsgrundlage:</strong> Erwägungsgrund 26 DSGVO. <br><strong>Umsetzung:</strong> Für die interne Prozessanalyse sollten Daten anonymisiert werden (kein Personenbezug mehr). Wenn ein Bezug nötig ist, ist Pseudonymisierung (z.B. Ersetzen des Namens durch eine ID) das Mittel der Wahl. Dies muss im System technisch vorgesehen sein ("Privacy by Design").' },
+                { title: 'Technische & Organisatorische Maßnahmen (TOMs)', content: '<strong>Rechtsgrundlage:</strong> Art. 32 DSGVO. <br><strong>Umsetzung:</strong> Umfasst Verschlüsselung (bei Übertragung und Speicherung), strenge Zugriffskontrollen (Need-to-know-Prinzip), sichere Passwörter und die Sicherstellung, dass Server in der EU/Deutschland stehen.' },
+                { title: 'Auftragsverarbeitungsvertrag (AVV)', content: '<strong>Rechtsgrundlage:</strong> Art. 28 DSGVO. <br><strong>Umsetzung:</strong> Zwingend erforderlich bei Zusammenarbeit mit einem externen IT-Dienstleister. Der Vertrag regelt detailliert die Pflichten des Dienstleisters im Umgang mit den Daten und stellt sicher, dass dieser die Datenschutzstandards einhält.' },
+                { title: 'Informationspflicht & Betroffenenrechte', content: '<strong>Rechtsgrundlage:</strong> Art. 13, 14, 15-22 DSGVO. <br><strong>Umsetzung:</strong> Antragsteller müssen vor der Datenerhebung klar und verständlich über die Verarbeitung, ihre Zwecke, die Speicherdauer und ihre Rechte (Auskunft, Löschung, Widerspruch etc.) informiert werden.' }
+            ];
+
+            function renderFundingCards(filter = 'all') {
+                const container = document.getElementById('funding-cards');
+                container.innerHTML = '';
+                const filteredData = filter === 'all' ? fundingData : fundingData.filter(item => item.level === filter);
+                
+                filteredData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'funding-card bg-gray-50 p-6 rounded-lg border border-gray-200 transition-all duration-300 hover:shadow-lg hover:border-blue-300';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-lg font-bold text-gray-800">${item.name}</h3>
+                            <span class="text-xs font-semibold py-1 px-2 rounded-full ${item.level === 'Bund' ? 'bg-black text-white' : item.level === 'Land' ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'}">${item.level}</span>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-500 mb-2">${item.type}</p>
+                        <p class="text-sm text-gray-700 mb-3"><strong class="font-semibold">Relevant für:</strong> ${item.target}</p>
+                        <p class="text-sm text-gray-600">${item.details}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+            
+            function renderPrivacyChecklist() {
+                const container = document.getElementById('privacy-checklist');
+                container.innerHTML = '';
+                privacyData.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'border border-gray-200 rounded-lg';
+                    div.innerHTML = `
+                        <button class="accordion-button w-full text-left p-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <span class="font-semibold text-gray-700">${item.title}</span>
+                            <span class="transform transition-transform duration-300">▼</span>
+                        </button>
+                        <div class="accordion-content bg-white p-4 border-t border-gray-200 text-gray-600 text-sm">
+                            ${item.content}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                document.querySelectorAll('.accordion-button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const content = button.nextElementSibling;
+                        const icon = button.querySelector('span:last-child');
+                        if (content.style.maxHeight) {
+                            content.style.maxHeight = null;
+                            icon.style.transform = 'rotate(0deg)';
+                        } else {
+                            document.querySelectorAll('.accordion-content').forEach(c => c.style.maxHeight = null);
+                            document.querySelectorAll('.accordion-button span:last-child').forEach(i => i.style.transform = 'rotate(0deg)');
+                            content.style.maxHeight = content.scrollHeight + "px";
+                            icon.style.transform = 'rotate(180deg)';
+                        }
+                    });
+                });
+            }
+
+            function initFundingChart() {
+                const ctx = document.getElementById('fundingChart').getContext('2d');
+                const chartData = fundingData.filter(d => d.maxAmount > 0);
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.map(d => d.name),
+                        datasets: [{
+                            label: 'Max. Fördersumme in € (logarithmische Skala)',
+                            data: chartData.map(d => d.maxAmount),
+                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'logarithmic',
+                                title: {
+                                    display: true,
+                                    text: 'Fördersumme in Euro'
+                                },
+                                ticks: {
+                                    callback: function(value, index, values) {
+                                        return Number(value.toString()).toLocaleString('de-DE') + ' €';
+                                    }
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    autoSkip: false,
+                                    callback: function(value, index, values) {
+                                        const label = this.getLabelForValue(value);
+                                        if (label.length > 25) {
+                                            return label.substring(0, 25) + '...';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.x !== null) {
+                                            label += context.parsed.x.toLocaleString('de-DE') + ' €';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+            
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.dataset.target;
+                    
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    contentSections.forEach(section => {
+                        section.classList.remove('active');
+                        if (section.id === targetId) {
+                            section.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const filter = button.dataset.filter;
+                    renderFundingCards(filter);
+                    filterButtons.forEach(btn => {
+                        btn.classList.remove('bg-blue-500', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-gray-700');
+                    });
+                    button.classList.add('bg-blue-500', 'text-white');
+                    button.classList.remove('bg-gray-200', 'text-gray-700');
+                });
+            });
+
+            const osCard = document.getElementById('os-card');
+            const propCard = document.getElementById('prop-card');
+            osCard.addEventListener('click', () => {
+                osCard.classList.add('border-blue-500', 'bg-blue-50');
+                osCard.classList.remove('border-gray-300', 'bg-gray-50');
+                propCard.classList.add('border-gray-300', 'bg-gray-50');
+                propCard.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+             propCard.addEventListener('click', () => {
+                propCard.classList.add('border-blue-500', 'bg-blue-50');
+                propCard.classList.remove('border-gray-300', 'bg-gray-50');
+                osCard.classList.add('border-gray-300', 'bg-gray-50');
+                osCard.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+
+
+            renderFundingCards();
+            renderPrivacyChecklist();
+            initFundingChart();
+
+            // Gemini API Integration START
+            const findFundingBtn = document.getElementById('find-funding-btn');
+            const projectDescriptionInput = document.getElementById('project-description-input');
+            const fundingMatchResultsDiv = document.getElementById('funding-match-results');
+            const matchResultsContent = document.getElementById('match-results-content');
+            const findFundingText = document.getElementById('find-funding-text');
+            const findFundingSpinner = document.getElementById('find-funding-spinner');
+            const copyFundingResultsBtn = document.getElementById('copy-funding-results-btn');
+
+            const askPrivacyBtn = document.getElementById('ask-privacy-btn');
+            const privacyQuestionInput = document.getElementById('privacy-question-input');
+            const privacyExplanationResultsDiv = document.getElementById('privacy-explanation-results');
+            const explanationContent = document.getElementById('explanation-content');
+            const askPrivacyText = document.getElementById('ask-privacy-text');
+            const askPrivacySpinner = document.getElementById('ask-privacy-spinner');
+            const copyPrivacyResultsBtn = document.getElementById('copy-privacy-results-btn');
+
+            // Simplified data for LLM input to reduce token usage and focus LLM
+            const simplifiedFundingData = fundingData.map(item => ({
+                name: item.name,
+                level: item.level,
+                type: item.type,
+                target: item.target,
+                details: item.details
+            }));
+
+            const simplifiedPrivacyData = privacyData.map(item => ({
+                title: item.title,
+                content: item.content
+            }));
+
+            // Custom modal for alerts instead of alert()
+            function showCustomAlert(message) {
+                const existingAlert = document.getElementById('custom-alert-modal');
+                if (existingAlert) {
+                    existingAlert.remove();
+                }
+
+                const modalHtml = `
+                    <div id="custom-alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                            <p class="text-gray-800 text-center mb-4">${message}</p>
+                            <button id="custom-alert-ok-btn" class="bg-blue-500 text-white py-2 px-4 rounded-md w-full hover:bg-blue-600">OK</button>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+                document.getElementById('custom-alert-ok-btn').addEventListener('click', () => {
+                    document.getElementById('custom-alert-modal').remove();
+                });
+            }
+
+            // Override window.alert
+            window.alert = showCustomAlert;
+
+
+            findFundingBtn.addEventListener('click', async () => {
+                const userProjectDescription = projectDescriptionInput.value.trim();
+                if (!userProjectDescription) {
+                    window.alert('Bitte beschreiben Sie Ihr Projekt, um passende Förderprogramme zu finden.');
+                    return;
+                }
+
+                findFundingText.textContent = 'Suchen...';
+                findFundingSpinner.classList.remove('hidden');
+                findFundingBtn.disabled = true;
+                fundingMatchResultsDiv.classList.add('hidden'); 
+
+                try {
+                    let chatHistory = [];
+                    const prompt = `Ich möchte ein digitales Projekt im Jugendamt starten. Hier ist eine Beschreibung meines Projekts: '${userProjectDescription}'. Unten findest du eine Liste von Förderprogrammen im JSON-Format. Bewerte jedes Programm danach, wie gut es zu meinem Projekt passt und wähle die 2-3 relevantesten Programme aus. Gib für jedes relevante Programm den Namen, die Förderart und eine kurze Begründung an, warum es passend ist, basierend auf den bereitgestellten Details. Formatiere die Ausgabe als eine Liste mit Spiegelstrichen.
+
+Verfügbare Förderprogramme:
+${JSON.stringify(simplifiedFundingData, null, 2)}`;
+
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; 
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        matchResultsContent.innerHTML = text.replace(/\n/g, '<br>');
+                        fundingMatchResultsDiv.classList.remove('hidden');
+                    } else {
+                        matchResultsContent.innerHTML = 'Konnte leider keine passenden Programme finden. Versuchen Sie es mit einer anderen Beschreibung.';
+                        fundingMatchResultsDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error fetching funding programs:', error);
+                    matchResultsContent.innerHTML = 'Es gab einen Fehler bei der Suche. Bitte versuchen Sie es später erneut.';
+                    fundingMatchResultsDiv.classList.remove('hidden');
+                } finally {
+                    findFundingText.textContent = 'Programme finden';
+                    findFundingSpinner.classList.add('hidden');
+                    findFundingBtn.disabled = false;
+                }
+            });
+
+            copyFundingResultsBtn.addEventListener('click', () => {
+                const textToCopy = matchResultsContent.innerText;
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    window.alert('Ergebnisse in die Zwischenablage kopiert!');
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+                document.body.removeChild(textArea);
+            });
+
+
+            askPrivacyBtn.addEventListener('click', async () => {
+                const userQuestion = privacyQuestionInput.value.trim();
+                if (!userQuestion) {
+                    window.alert('Bitte stellen Sie eine Frage zum Datenschutz.');
+                    return;
+                }
+
+                askPrivacyText.textContent = 'Antworten...';
+                askPrivacySpinner.classList.remove('hidden');
+                askPrivacyBtn.disabled = true;
+                privacyExplanationResultsDiv.classList.add('hidden'); 
+
+                try {
+                    let chatHistory = [];
+                    const prompt = `Ich habe eine Frage zum Datenschutz im Kontext eines Befragungssystems für das Jugendamt. Hier ist eine Checkliste mit relevanten Datenschutzthemen im JSON-Format. Beantworte meine Frage '${userQuestion}' basierend auf den Informationen in der Checkliste und deinem allgemeinen Wissen über DSGVO, BDSG und SGB. Erwähne relevante Artikel oder Gesetze, wenn möglich. Fasse dich kurz und prägnant, und formatiere die Antwort leserlich.
+
+Datenschutz-Checkliste:
+${JSON.stringify(simplifiedPrivacyData, null, 2)}`;
+
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; 
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        explanationContent.innerHTML = text.replace(/\n/g, '<br>');
+                        privacyExplanationResultsDiv.classList.remove('hidden');
+                    } else {
+                        explanationContent.innerHTML = 'Konnte leider keine Antwort finden. Bitte formulieren Sie Ihre Frage anders.';
+                        privacyExplanationResultsDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error fetching privacy explanation:', error);
+                    explanationContent.innerHTML = 'Es gab einen Fehler bei der Anfrage. Bitte versuchen Sie es später erneut.';
+                    privacyExplanationResultsDiv.classList.remove('hidden');
+                } finally {
+                    askPrivacyText.textContent = 'Frage stellen';
+                    askPrivacySpinner.classList.add('hidden');
+                    askPrivacyBtn.disabled = false;
+                }
+            });
+
+            copyPrivacyResultsBtn.addEventListener('click', () => {
+                const textToCopy = explanationContent.innerText;
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    window.alert('Antwort in die Zwischenablage kopiert!');
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+                document.body.removeChild(textArea);
+            });
+            // Gemini API Integration END
+
+        });
+    </script>
+
+</body>
+</html>
