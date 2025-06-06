@@ -120,6 +120,11 @@
                         </svg>
                     </button>
                 </div>
+                <button id="reportButton" class="audio-button ml-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                        <path fill-rule="evenodd" d="M1.5 8.25a.75.75 0 0 1 .75-.75h18a.75.75 0 0 1 0 1.5h-18a.75.75 0 0 1-.75-.75ZM1.5 12a.75.75 0 0 1 .75-.75h18a.75.75 0 0 1 0 1.5h-18a.75.75 0 0 1-.75-.75ZM1.5 15.75a.75.75 0 0 1 .75-.75h18a.75.75 0 0 1 0 1.5h-18a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
                 <button data-target="s1" class="nav-button active py-4 px-2">🚀 Aktionsplan</button>
                 <button data-target="s2" class="nav-button py-4 px-2">💰 Förder-Kompass</button>
                 <button data-target="s3" class="nav-button py-4 px-2">🤔 Strategische Weiche</button>
@@ -341,11 +346,31 @@
         </main>
     </div>
 
+    <!-- Modal Structure -->
+    <div id="reportModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full h-5/6 max-w-6xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Expertenbericht</h2>
+                <button id="closeModalButton" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <iframe id="reportIframe" src="" class="flex-grow w-full h-full border-0 rounded-b-lg"></iframe>
+        </div>
+    </div>
+ 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const navButtons = document.querySelectorAll('.nav-button');
             const contentSections = document.querySelectorAll('.content-section');
             const filterButtons = document.querySelectorAll('.filter-btn');
+
+            const reportButton = document.getElementById('reportButton');
+            const reportModal = document.getElementById('reportModal');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const reportIframe = document.getElementById('reportIframe');
 
             const audioPlayer = document.getElementById('audioPlayer');
             const playPauseButton = document.getElementById('playPauseButton');
@@ -361,6 +386,24 @@
                     playPauseButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
                                                     <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.38 2.872-1.664l11.55 6.933c1.296.777 1.296 2.653 0 3.43L7.372 21.01c-1.343.716-2.872-.238-2.872-1.664V5.653Z" clip-rule="evenodd" />
                                                   </svg>`;
+                }
+            });
+
+            reportButton.addEventListener('click', () => {
+                reportIframe.src = 'public/text.html';
+                reportModal.classList.remove('hidden');
+            });
+
+            closeModalButton.addEventListener('click', () => {
+                reportModal.classList.add('hidden');
+                reportIframe.src = ''; // Clear iframe content on close
+            });
+
+            // Close modal if clicked outside content
+            reportModal.addEventListener('click', (e) => {
+                if (e.target === reportModal) {
+                    reportModal.classList.add('hidden');
+                    reportIframe.src = '';
                 }
             });
 
